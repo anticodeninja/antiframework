@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>AntiFramework</RootNamespace>
+    <TargetFrameworks>net462;netstandard2.0;netcoreapp2.1</TargetFrameworks>
+    <PackageId>antiframework</PackageId>
+    <Version>0.9.0</Version>
+    <Authors>anticode.ninja</Authors>
+    <Company>anticode.ninja</Company>
+    <Copyright>Artem Yamshanov, me [at] anticode.ninja</Copyright>
+    <Description>
+      It's not a framework.
+      It's just bunch of classes which are traveling for a long time from one project to another and sometimes are used as a framework.
+    </Description>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>
