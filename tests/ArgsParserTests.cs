@@ -6,6 +6,7 @@
 namespace Tests
 {
     using System;
+    using System.Collections.Generic;
 
     using AntiFramework;
 
@@ -22,6 +23,11 @@ namespace Tests
             "  -s|--second <Mode3:Mode1|Mode2|Mode3>\n" +
             "  -a|--append\n" +
             "  <message:String> - configure message\n";
+
+        private const string AMOUNT_HELP =
+            "Amount argparse test\n" +
+            "  <digits:Int32>{1,2}\n" +
+            "  <digits 2:String>{1,*}\n";
 
         private const string SUBPARSER_HELP =
             "Subparser argparse test\n" +
@@ -104,6 +110,13 @@ namespace Tests
         }
 
         [Test]
+        public void SimpleFullHelpTest()
+        {
+            var result = SimpleParser(out _, out _, out _, out _, "-h");
+            Assert.AreEqual(SIMPLE_HELP, result);
+        }
+
+        [Test]
         public void MultipleValuesTest()
         {
             var result = new ArgsParser(new [] { "-vvv", "--verbose", "-a", "1", "--append", "2", "3", "4", "5"})
@@ -121,10 +134,28 @@ namespace Tests
         }
 
         [Test]
-        public void SimpleFullHelpTest()
+        public void AmountTest()
         {
-            var result = SimpleParser(out _, out _, out _, out _, "-h");
-            Assert.AreEqual(SIMPLE_HELP, result);
+            var result = AmountParser(out var list1, out var list2, "1", "2", "3", "4", "5");
+
+            Assert.IsNull(result);
+            CollectionAssert.AreEqual(new [] { 1, 2 }, list1);
+            CollectionAssert.AreEqual(new [] { "3", "4", "5" }, list2);
+        }
+
+        [Test]
+        public void AmountNegativeTest()
+        {
+            var result = AmountParser(out _, out _, "1", "2");
+            StringAssert.Contains(AMOUNT_HELP, result);
+            StringAssert.Contains(ArgsParser.AttemptToReadNonExistentElement, result);
+        }
+
+        [Test]
+        public void AmountHelpTest()
+        {
+            var result = AmountParser(out _, out _, "-h");
+            Assert.AreEqual(AMOUNT_HELP, result);
         }
 
         [Test]
@@ -222,6 +253,16 @@ namespace Tests
                 .Keys("s", "second").Value(out second, TestEnum.Mode3)
                 .Keys("a", "append").Flag(out flag)
                 .Name("message").Tip("configure message").Value(out message)
+                .Result();
+        }
+
+        private string AmountParser(out List<int> list1, out List<string> list2, params string[] args)
+        {
+            return new ArgsParser(args)
+                .Help("h", "help")
+                .Comment("Amount argparse test")
+                .Name("digits").Amount(1, 2).Values<int>(out list1)
+                .Name("digits 2").Amount(1, int.MaxValue).Values<string>(out list2)
                 .Result();
         }
 

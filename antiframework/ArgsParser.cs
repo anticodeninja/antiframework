@@ -23,7 +23,7 @@ namespace AntiFramework
 
         private readonly string[] _args;
 
-        private readonly bool[] _argsMask;
+        private readonly int[] _argsMask;
 
         private int _position;
 
@@ -32,6 +32,10 @@ namespace AntiFramework
         private string _lastTip;
 
         private string _lastName;
+
+        private int _lastMin;
+
+        private int _lastMax;
 
         private List<bool> _subParserMask;
 
@@ -67,10 +71,11 @@ namespace AntiFramework
         public ArgsParser(string[] args)
         {
             _args = args;
-            _argsMask = _args.Select(x => true).ToArray();
+            _argsMask = _args.Select(x => 0).ToArray();
             _subParserMask = new List<bool>();
             _position = 0;
             _help = new StringBuilder();
+            Reset();
         }
 
         #endregion Constructors
@@ -79,7 +84,7 @@ namespace AntiFramework
 
         public ArgsParser Help(params string[] keys)
         {
-            _helpMode = GetKeyPosition(keys).Any();
+            _helpMode = GetKeyPosition(keys) != -1;
             return this;
         }
 
@@ -107,37 +112,66 @@ namespace AntiFramework
             return this;
         }
 
+        public ArgsParser Amount(int min, int max)
+        {
+            _lastMin = min;
+            _lastMax = max;
+            return this;
+        }
+
         public ArgsParser Value<T>(out T value)
         {
-            ValueImpl<T>(out var temp, 1, null);
-            value = temp.Count > 0 ? temp.Last() : default;
-            return this;
+            value = default;
+            if (AppendHelp(typeof(T), false, null))
+                return Reset();
+
+            var counter = 0;
+            while ((_lastKeys != null || counter < 1) && ValueImpl(ref value))
+                counter += 1;
+            if (counter < 1)
+                _result = $"{AttemptToReadNonExistentElement} {GetTip()}";
+
+            return Reset();
         }
 
         public ArgsParser Value<T>(out T value, T defValue)
         {
-            ValueImpl<T>(out var temp, 0, Convert.ToString(defValue, CultureInfo.InvariantCulture));
-            value = temp.Count > 0 ? temp.Last() : defValue;
-            return this;
+            value = defValue;
+            if (AppendHelp(typeof(T), false, Convert.ToString(defValue, CultureInfo.InvariantCulture)))
+                return Reset();
+
+            var counter = 0;
+            while ((_lastKeys != null || counter < 1) && ValueImpl(ref value))
+                counter += 1;
+
+            return Reset();
         }
 
-        public ArgsParser Values<T>(out List<T> values) => ValueImpl(out values, int.MaxValue, null);
+        public ArgsParser Values<T>(out List<T> values)
+        {
+            values = new List<T>();
+            if (AppendHelp(typeof(T), true, null))
+                return Reset();
+
+            T temp = default;
+            while ((_lastKeys != null || values.Count < _lastMax) && ValueImpl(ref temp))
+                values.Add(temp);
+            if (values.Count < _lastMin)
+                _result = $"{AttemptToReadNonExistentElement} {GetTip()}";
+
+            return Reset();
+        }
 
         public ArgsParser Flag(out int value)
         {
             if (_lastKeys == null) throw new InvalidOperationException();
 
             value = 0;
-            if (AppendHelp(null, null))
+            if (AppendHelp(null, true, null))
                 return Reset();
-            if (_result != null)
-                return this;
 
-            foreach (var keyPosition in GetKeyPosition(_lastKeys))
-            {
+            while (GetKeyPosition(_lastKeys) != -1)
                 value += 1;
-                _argsMask[keyPosition] = false;
-            }
 
             return Reset();
         }
@@ -145,7 +179,7 @@ namespace AntiFramework
         public ArgsParser Subparser(Action<ArgsParser> parser)
         {
             _help.Append(' ', (_subParserDepth + 1) * PADDING);
-            AppendJoin(_lastKeys ?? new [] { "{}" });
+            AppendHelp(_lastKeys ?? new [] { "{}" });
 
             if (_lastTip != null)
             {
@@ -162,7 +196,7 @@ namespace AntiFramework
             var realMode = !_helpMode && _result == null && !_subParserMask[_subParserDepth];
             if (realMode && _lastKeys != null && _position < _args.Length && _lastKeys.Contains(_args[_position]))
             {
-                _argsMask[_position] = false;
+                _argsMask[_position] += 1;
                 _position += 1;
                 _subParserMask[_subParserDepth] = true;
             }
@@ -194,7 +228,7 @@ namespace AntiFramework
 
             if (_result == null)
             {
-                if (_argsMask.Any(x => x))
+                if (_argsMask.Any(x => x == 0))
                     _result = UnexpectedElements;
                 if (_subParserMask.Any(x => !x))
                     _result = UnknownCommand;
@@ -206,100 +240,69 @@ namespace AntiFramework
             return null;
         }
 
-        private ArgsParser ValueImpl<T>(out List<T> values, int require, string defValue)
+        private bool ValueImpl<T>(ref T value)
         {
             if (!((_lastName != null) ^ (_lastKeys != null)))
                 throw new InvalidOperationException("Name or keys should be configured");
 
-            var valuesCapture = new List<T>();
-            values = valuesCapture;
-            if (AppendHelp(typeof(T), defValue))
-                return Reset();
-            if (_result != null)
-                return this;
-
-            string tip;
-
-            bool Add(string raw)
-            {
-                try
-                {
-                    var type = typeof(T);
-                    valuesCapture.Add((T)(type.IsEnum ? Enum.Parse(type, raw) : Convert.ChangeType(raw, typeof(T))));
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    _result = $"cannot parse {raw} [{tip}]: {e.Message}";
-                    return false;
-                }
-            }
+            string rawValue;
 
             if (_lastKeys != null)
             {
-                tip = _lastTip ?? string.Join("|", _lastKeys);
+                var keyPosition = GetKeyPosition(_lastKeys);
+                if (keyPosition == -1)
+                    return false;
 
-                foreach (var keyPosition in GetKeyPosition(_lastKeys))
-                {
-                    _argsMask[keyPosition + 1] = false;
-                    if (!Add(_args[keyPosition + 1]))
-                        return Reset();
-                }
+                rawValue = _args[keyPosition + 1];
+                _argsMask[keyPosition + 1] += 1;
             }
             else
             {
-                tip = _lastTip ?? _lastName;
+                while (_position < _args.Length && _argsMask[_position] != 0)
+                    _position += 1;
+                if (_position >= _args.Length)
+                    return false;
 
-                for (var i = 0; i < require; ++i)
-                {
-                    while (_position < _args.Length && _argsMask[_position] == false)
-                        _position += 1;
-                    if (_position >= _args.Length)
-                        break;
-
-                    if (!Add(_args[_position]))
-                        return Reset();
-
-                    _argsMask[_position++] = false;
-                }
+                rawValue = _args[_position];
+                _argsMask[_position] += 1;
             }
 
-            if (require != int.MaxValue && values.Count < require)
-                _result = $"{AttemptToReadNonExistentElement} {tip}";
-
-            return Reset();
+            try
+            {
+                var type = typeof(T);
+                value = (T)(type.IsEnum ? Enum.Parse(type, rawValue) : Convert.ChangeType(rawValue, typeof(T)));
+                return true;
+            }
+            catch (Exception e)
+            {
+                _result = $"cannot parse {rawValue} [{GetTip()}]: {e.Message}";
+                return false;
+            }
         }
 
-        private IEnumerable<int> GetKeyPosition(string[] keys)
+        private int GetKeyPosition(string[] keys)
         {
             for (var i = 0; i < _args.Length; ++i)
             {
-                if (!_argsMask[i])
-                    continue;
-
                 if (_args[i].StartsWith("--"))
                 {
-                    if (keys.Contains(_args[i].Substring(2)))
+                    if (keys.Contains(_args[i].Substring(2)) && _argsMask[i] == 0)
                     {
-                        _argsMask[i] = false;
-                        yield return i;
+                        _argsMask[i] += 1;
+                        return i;
                     }
-
-                    continue;
                 }
-
-                if (_args[i].StartsWith("-"))
+                else if (_args[i].StartsWith("-"))
                 {
-                    if (keys.Contains(_args[i].Substring(1, 1)))
+                    if (keys.Contains(_args[i].Substring(1, 1)) && _argsMask[i] < (_args[i].Length - 1))
                     {
-                        _argsMask[i] = false;
-                        for (var j = 1; j < _args[i].Length; ++j)
-                            yield return i;
+                        _argsMask[i] += 1;
+                        return i;
                     }
-
-                    continue;
                 }
             }
+
+            return -1;
         }
 
         private ArgsParser Reset()
@@ -307,22 +310,26 @@ namespace AntiFramework
             _lastKeys = null;
             _lastTip = null;
             _lastName = null;
+            _lastMin = 0;
+            _lastMax = int.MaxValue;
             return this;
         }
 
-        private void AppendJoin<T>(IEnumerable<T> elements)
+        private string GetTip() => _lastTip ?? (_lastKeys != null ? string.Join("|", _lastKeys) : _lastName);
+
+        private void AppendHelp<T>(IEnumerable<T> elements)
         {
             foreach (var el in elements)
                 _help.Append(el).Append('|');
             _help.Length -= 1;
         }
 
-        private bool AppendHelp(Type type, string defValue)
+        private bool AppendHelp(Type type, bool multiple, string defValue)
         {
             _help.Append(' ', (_subParserDepth + 1) * PADDING);
 
             if (_lastKeys != null)
-                AppendJoin(_lastKeys.Select(key => key.Length == 1 ? $"-{key}" : $"--{key}"));
+                AppendHelp(_lastKeys.Select(key => key.Length == 1 ? $"-{key}" : $"--{key}"));
 
             if (type != null)
             {
@@ -337,18 +344,21 @@ namespace AntiFramework
                     _help.Append(_lastName).Append(":");
 
                 if (type.IsEnum)
-                    AppendJoin(Enum.GetNames(type));
+                    AppendHelp(Enum.GetNames(type));
                 else
                     _help.Append(type.Name);
 
                 _help.Append(">");
             }
 
+            if (_lastName != null && multiple)
+                _help.AppendFormat("{{{0},{1}}}", _lastMin, _lastMax != int.MaxValue ? _lastMax.ToString() : "*");
+
             if (_lastTip != null)
                 _help.Append(" - ").Append(_lastTip);
             _help.Append('\n');
 
-            return _helpMode;
+            return _helpMode || _result != null;
         }
 
         #endregion Methods
