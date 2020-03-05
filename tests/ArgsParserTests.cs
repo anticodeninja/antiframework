@@ -18,30 +18,39 @@ namespace Tests
 
         private const string SIMPLE_HELP =
             "Simple argparse test\n" +
-            "  -f|--first <Int32> - first test argument\n" +
-            "  -s|--second <Mode1|Mode2|Mode3>\n" +
+            "  -f|--first <10000:Int32> - first test argument\n" +
+            "  -s|--second <Mode3:Mode1|Mode2|Mode3>\n" +
             "  -a|--append\n" +
-            "  <String> - configure message\n";
+            "  <message:String> - configure message\n";
 
         private const string SUBPARSER_HELP =
             "Subparser argparse test\n" +
             "  t1 - first test subparser\n" +
-            "    -f|--first <Int32> - first test argument\n" +
-            "    <Int32>\n" +
+            "    -f|--first <10000:Int32> - first test argument\n" +
+            "    <pos:Int32>\n" +
             "  t2\n" +
-            "    -s|--second <Int32>\n" +
-            "    <Int32>\n";
+            "    -s|--second <0:Int32>\n" +
+            "    <pos:Int32>\n";
 
         private const string SUBPARSER_SUBPARSER_HELP =
             "Subparser subparser argparse test\n" +
             "  t1 - first test subparser\n" +
             "    t11\n" +
-            "      -f|--first <Int32> - first test argument\n" +
-            "      <Int32>\n" +
+            "      -f|--first <10000:Int32> - first test argument\n" +
+            "      <pos:Int32>\n" +
             "    t12\n" +
-            "      -s|--second <Int32>\n" +
-            "      <Int32>\n" +
+            "      -s|--second <0:Int32>\n" +
+            "      <pos:Int32>\n" +
             "  t2\n";
+
+        private const string SUBPARSER_DEFAULT_HELP =
+            "Subparser default argparse test\n" +
+            "  t1|t2 - first test subparser\n" +
+            "    -f|--first <10000:Int32> - first test argument\n" +
+            "    <pos:Int32>\n" +
+            "  {}\n" +
+            "    -s|--second <0:Int32>\n" +
+            "    <pos:Int32>\n";
 
         #endregion Constants
 
@@ -92,6 +101,23 @@ namespace Tests
             var result = SimpleParser(out _, out _, out _, out _);
             StringAssert.Contains(ArgsParser.AttemptToReadNonExistentElement, result);
             StringAssert.Contains(SIMPLE_HELP, result);
+        }
+
+        [Test]
+        public void MultipleValuesTest()
+        {
+            var result = new ArgsParser(new [] { "-vvv", "--verbose", "-a", "1", "--append", "2", "3", "4", "5"})
+                .Help("h", "help")
+                .Comment("Multiple values argparse test")
+                .Keys("v", "verbose").Flag(out var verbose)
+                .Keys("a", "append").Values<int>(out var keyList)
+                .Name("digits").Values<string>(out var posList)
+                .Result();
+
+            Assert.IsNull(result);
+            CollectionAssert.AreEqual(new [] { 1, 2 }, keyList);
+            CollectionAssert.AreEqual(new [] { "3", "4", "5" }, posList);
+            Assert.AreEqual(4, verbose);
         }
 
         [Test]
@@ -164,64 +190,82 @@ namespace Tests
         }
 
         [Test]
-        public void MultipleValuesTest()
+        public void SubparserDefaultTest()
         {
-            var result = new ArgsParser(new [] { "-vvv", "--verbose", "-a", "1", "--append", "2", "3", "4", "5"})
-                .Help(true, "h", "help")
-                .Comment("Multiple values argparse test")
-                .Keys("v", "verbose").Flag(out var verbose)
-                .Keys("a", "append").Values<int>(out var keyList)
-                .Values<string>(out var posList)
-                .Result(true);
-
+            var result = SubparserDefault(SubparserMode1, SubparserMode2, "t1", "-f", "100", "30");
+            Assert.AreEqual(_lastParser, (Action<ArgsParser>)SubparserMode1);
             Assert.IsNull(result);
-            CollectionAssert.AreEqual(new [] { 1, 2 }, keyList);
-            CollectionAssert.AreEqual(new [] { "3", "4", "5" }, posList);
-            Assert.AreEqual(4, verbose);
+
+            result = SubparserDefault(SubparserMode1, SubparserMode2, "t2", "-f", "100", "30");
+            Assert.AreEqual(_lastParser, (Action<ArgsParser>)SubparserMode1);
+            Assert.IsNull(result);
+
+            result = SubparserDefault(SubparserMode1, SubparserMode2, "--second", "10", "150");
+            Assert.AreEqual(_lastParser, (Action<ArgsParser>)SubparserMode2);
+            Assert.IsNull(result);
+        }
+
+        [Test]
+        public void SubparserDefaultHelpTest()
+        {
+            var result = SubparserDefault(SubparserMode1, SubparserMode2, "-h");
+            Assert.AreEqual(SUBPARSER_DEFAULT_HELP, result);
+            Assert.IsNull(_lastParser);
         }
 
         private string SimpleParser(out string message, out int first, out TestEnum second, out int flag, params string[] args)
         {
             return new ArgsParser(args)
-                .Help(true, "h", "help")
+                .Help("h", "help")
                 .Comment("Simple argparse test")
                 .Keys("f", "first").Tip("first test argument").Value(out first, 10000)
                 .Keys("s", "second").Value(out second, TestEnum.Mode3)
                 .Keys("a", "append").Flag(out flag)
-                .Tip("configure message").Value(out message)
-                .Result(true);
+                .Name("message").Tip("configure message").Value(out message)
+                .Result();
         }
 
         private string Subparser(Action<ArgsParser> mode1, Action<ArgsParser> mode2, params string[] args)
         {
             _lastParser = null;
             return new ArgsParser(args)
-                .Help(true, "h", "help")
+                .Help("h", "help")
                 .Comment("Subparser argparse test")
-                .Tip("first test subparser").Subparser("t1", mode1)
-                .Subparser("t2", mode2)
-                .Result(true);
+                .Keys("t1").Tip("first test subparser").Subparser(mode1)
+                .Keys("t2").Subparser(mode2)
+                .Result();
         }
 
         private string SubparserSubparser(Action<ArgsParser> mode11, Action<ArgsParser> mode12, Action<ArgsParser> mode2, params string[] args)
         {
             _lastParser = null;
             return new ArgsParser(args)
-                .Help(true, "h", "help")
+                .Help("h", "help")
                 .Comment("Subparser subparser argparse test")
-                .Tip("first test subparser").Subparser("t1", p => p
-                    .Subparser("t11", mode11)
-                    .Subparser("t12", mode12))
-                .Subparser("t2", mode2)
-                .Result(true);
+                .Keys("t1").Tip("first test subparser").Subparser(p => p
+                    .Keys("t11").Subparser(mode11)
+                    .Keys("t12").Subparser(mode12))
+                .Keys("t2").Subparser(mode2)
+                .Result();
+        }
+
+        private string SubparserDefault(Action<ArgsParser> mode1, Action<ArgsParser> mode2, params string[] args)
+        {
+            _lastParser = null;
+            return new ArgsParser(args)
+                .Help("h", "help")
+                .Comment("Subparser default argparse test")
+                .Keys("t1", "t2").Tip("first test subparser").Subparser(mode1)
+                .Subparser(mode2)
+                .Result();
         }
 
         private void SubparserMode1(ArgsParser parser)
         {
             if (parser
                     .Keys("f", "first").Tip("first test argument").Value(out var first, 10000)
-                    .Value<int>(out var position)
-                    .Result(true) != null)
+                    .Name("pos").Value<int>(out var position)
+                    .Result() != null)
                 return;
 
             _lastParser = SubparserMode1;
@@ -233,8 +277,8 @@ namespace Tests
         {
             if (parser
                     .Keys("s", "second").Value(out var second, 0)
-                    .Value<int>(out var position)
-                    .Result(true) != null)
+                    .Name("pos").Value<int>(out var position)
+                    .Result() != null)
                 return;
 
             _lastParser = SubparserMode2;
@@ -244,7 +288,7 @@ namespace Tests
 
         private void SubparserMode3(ArgsParser parser)
         {
-            if (parser.Result(true) != null)
+            if (parser.Result() != null)
                 return;
 
             _lastParser = SubparserMode3;

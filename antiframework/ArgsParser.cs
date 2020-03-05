@@ -7,6 +7,7 @@ namespace AntiFramework
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
     using System.Text;
 
@@ -24,19 +25,19 @@ namespace AntiFramework
 
         private readonly bool[] _argsMask;
 
-        private string[] _lastKeys;
-
         private int _position;
+
+        private string[] _lastKeys;
 
         private string _lastTip;
 
-        private StringBuilder _help;
+        private string _lastName;
 
         private List<bool> _subParserMask;
 
         private int _subParserDepth;
 
-        private bool _helpAddOnError;
+        private StringBuilder _help;
 
         private bool _helpMode;
 
@@ -76,9 +77,8 @@ namespace AntiFramework
 
         #region Methods
 
-        public ArgsParser Help(bool addOnError, params string[] keys)
+        public ArgsParser Help(params string[] keys)
         {
-            _helpAddOnError = addOnError;
             _helpMode = GetKeyPosition(keys).Any();
             return this;
         }
@@ -101,28 +101,34 @@ namespace AntiFramework
             return this;
         }
 
+        public ArgsParser Name(string name)
+        {
+            _lastName = name;
+            return this;
+        }
+
         public ArgsParser Value<T>(out T value)
         {
-            ValueImpl<T>(out var temp, 1);
+            ValueImpl<T>(out var temp, 1, null);
             value = temp.Count > 0 ? temp.Last() : default;
             return this;
         }
 
         public ArgsParser Value<T>(out T value, T defValue)
         {
-            ValueImpl<T>(out var temp, 0);
+            ValueImpl<T>(out var temp, 0, Convert.ToString(defValue, CultureInfo.InvariantCulture));
             value = temp.Count > 0 ? temp.Last() : defValue;
             return this;
         }
 
-        public ArgsParser Values<T>(out List<T> values) => ValueImpl(out values, int.MaxValue);
+        public ArgsParser Values<T>(out List<T> values) => ValueImpl(out values, int.MaxValue, null);
 
         public ArgsParser Flag(out int value)
         {
             if (_lastKeys == null) throw new InvalidOperationException();
 
             value = 0;
-            if (Help(null))
+            if (AppendHelp(null, null))
                 return Reset();
             if (_result != null)
                 return this;
@@ -136,24 +142,32 @@ namespace AntiFramework
             return Reset();
         }
 
-        public ArgsParser Subparser(string key, Action<ArgsParser> parser)
+        public ArgsParser Subparser(Action<ArgsParser> parser)
         {
-            _help.Append(' ', (_subParserDepth + 1) * PADDING).Append(key);
+            _help.Append(' ', (_subParserDepth + 1) * PADDING);
+            AppendJoin(_lastKeys ?? new [] { "{}" });
+
             if (_lastTip != null)
             {
                 _help.Append(" - ").Append(_lastTip);
                 _lastTip = null;
             }
+
             _help.Append('\n');
 
             if (_subParserDepth + 1 > _subParserMask.Count)
                 _subParserMask.Add(false);
 
             var oldHelpMode = _helpMode;
-            if (!_helpMode && _result == null && !_subParserMask[_subParserDepth] && _position < _args.Length && _args[_position] == key)
+            var realMode = !_helpMode && _result == null && !_subParserMask[_subParserDepth];
+            if (realMode && _lastKeys != null && _position < _args.Length && _lastKeys.Contains(_args[_position]))
             {
                 _argsMask[_position] = false;
                 _position += 1;
+                _subParserMask[_subParserDepth] = true;
+            }
+            else if (realMode && _lastKeys == null)
+            {
                 _subParserMask[_subParserDepth] = true;
             }
             else
@@ -173,12 +187,12 @@ namespace AntiFramework
             return this;
         }
 
-        public string Result(bool validate)
+        public string Result()
         {
             if (_helpMode)
                 return _help.ToString();
 
-            if (_result == null && validate)
+            if (_result == null)
             {
                 if (_argsMask.Any(x => x))
                     _result = UnexpectedElements;
@@ -187,21 +201,24 @@ namespace AntiFramework
             }
 
             if (_result != null)
-                return _helpAddOnError ? $"{_help}\n{_result}" : _result;
+                return $"{_help}\n{_result}";
 
             return null;
         }
 
-        private ArgsParser ValueImpl<T>(out List<T> values, int require)
+        private ArgsParser ValueImpl<T>(out List<T> values, int require, string defValue)
         {
+            if (!((_lastName != null) ^ (_lastKeys != null)))
+                throw new InvalidOperationException("Name or keys should be configured");
+
             var valuesCapture = new List<T>();
             values = valuesCapture;
-            if (Help(typeof(T)))
+            if (AppendHelp(typeof(T), defValue))
                 return Reset();
             if (_result != null)
                 return this;
 
-            string tip = _lastTip;
+            string tip;
 
             bool Add(string raw)
             {
@@ -231,6 +248,8 @@ namespace AntiFramework
             }
             else
             {
+                tip = _lastTip ?? _lastName;
+
                 for (var i = 0; i < require; ++i)
                 {
                     while (_position < _args.Length && _argsMask[_position] == false)
@@ -238,7 +257,6 @@ namespace AntiFramework
                     if (_position >= _args.Length)
                         break;
 
-                    tip = _lastTip ?? _position.ToString();
                     if (!Add(_args[_position]))
                         return Reset();
 
@@ -266,6 +284,7 @@ namespace AntiFramework
                         _argsMask[i] = false;
                         yield return i;
                     }
+
                     continue;
                 }
 
@@ -277,6 +296,7 @@ namespace AntiFramework
                         for (var j = 1; j < _args[i].Length; ++j)
                             yield return i;
                     }
+
                     continue;
                 }
             }
@@ -286,41 +306,49 @@ namespace AntiFramework
         {
             _lastKeys = null;
             _lastTip = null;
+            _lastName = null;
             return this;
         }
 
-        private bool Help(Type type)
+        private void AppendJoin<T>(IEnumerable<T> elements)
         {
-             void AppendJoin<T>(IEnumerable<T> elements)
-             {
-                 foreach (var el in elements)
-                     _help.Append(el).Append('|');
-                 _help.Length -= 1;
-             }
+            foreach (var el in elements)
+                _help.Append(el).Append('|');
+            _help.Length -= 1;
+        }
 
-             _help.Append(' ', (_subParserDepth + 1) * PADDING);
+        private bool AppendHelp(Type type, string defValue)
+        {
+            _help.Append(' ', (_subParserDepth + 1) * PADDING);
 
-             if (_lastKeys != null)
-                 AppendJoin(_lastKeys.Select(key => key.Length == 1 ? $"-{key}" : $"--{key}"));
+            if (_lastKeys != null)
+                AppendJoin(_lastKeys.Select(key => key.Length == 1 ? $"-{key}" : $"--{key}"));
 
-             if (type != null)
-             {
-                 if (_lastKeys != null)
-                     _help.Append(' ');
+            if (type != null)
+            {
+                if (_lastKeys != null)
+                    _help.Append(' ');
 
-                 _help.Append("<");
-                 if (type.IsEnum)
-                     AppendJoin(Enum.GetNames(type));
-                 else
+                _help.Append("<");
+
+                if (defValue != null)
+                    _help.Append(defValue).Append(":");
+                else if (_lastName != null)
+                    _help.Append(_lastName).Append(":");
+
+                if (type.IsEnum)
+                    AppendJoin(Enum.GetNames(type));
+                else
                     _help.Append(type.Name);
-                 _help.Append(">");
-             }
 
-             if (_lastTip != null)
-                 _help.Append(" - ").Append(_lastTip);
-             _help.Append('\n');
+                _help.Append(">");
+            }
 
-             return _helpMode;
+            if (_lastTip != null)
+                _help.Append(" - ").Append(_lastTip);
+            _help.Append('\n');
+
+            return _helpMode;
         }
 
         #endregion Methods
