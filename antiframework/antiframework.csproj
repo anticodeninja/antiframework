@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>AntiFramework</RootNamespace>
@@ -8,10 +8,7 @@
     <Authors>anticode.ninja</Authors>
     <Company>anticode.ninja</Company>
     <Copyright>Artem Yamshanov, me [at] anticode.ninja</Copyright>
-    <Description>
-      It's not a framework.
-      It's just bunch of classes which are traveling for a long time from one project to another and sometimes are used as a framework.
-    </Description>
+    <Description>It's not a framework. It's just a bunch of classes which have been traveling for a long time from one project to another and... sometimes are used as a framework.</Description>
     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
   </PropertyGroup>
 
