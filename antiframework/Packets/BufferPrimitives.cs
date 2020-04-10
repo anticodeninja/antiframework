@@ -41,6 +41,9 @@
 
         public static byte[] GetBytes(byte[] buffer, int offset, int count) => GetBytes(buffer, ref offset, count);
 
+        public static string GetString(byte[] buffer, Encoding encoding, int offset, int count)
+            => GetString(buffer, encoding, ref offset, count);
+
         public static ulong GetVarious(byte[] buffer, ref int offset, int count)
         {
             ulong result = 0;
@@ -89,6 +92,13 @@
             return temp;
         }
 
+        public static string GetString(byte[] buffer, Encoding encoding, ref int offset, int count)
+        {
+            var temp = encoding.GetString(buffer, offset, count);
+            offset += count;
+            return temp;
+        }
+
         public static ulong GetVarInt(byte[] buffer, ref int offset)
         {
             byte mask;
@@ -127,6 +137,13 @@
         public static void SetBytes(byte[] buffer, ref int offset, byte[] data) => SetBytes(buffer, ref offset, data, 0, data.Length);
         public static void SetBytes(byte[] buffer, int offset, byte[] data) => SetBytes(buffer, ref offset, data, 0, data.Length);
         public static void SetBytes(byte[] buffer, int offset, byte[] data, int index, int count) => SetBytes(buffer, ref offset, data, index, count);
+
+        public static void SetString(byte[] buffer, Encoding encoding, ref int offset, string data)
+            => SetString(buffer, encoding, ref offset, data, 0, data.Length);
+        public static void SetString(byte[] buffer, Encoding encoding, int offset, string data)
+            => SetString(buffer, encoding, ref offset, data, 0, data.Length);
+        public static void SetString(byte[] buffer, Encoding encoding, int offset, string data, int index, int count)
+            => SetString(buffer, encoding, ref offset, data, index, count);
 
         public static void SetVarious(byte[] buffer, ref int offset, ulong data, int count)
         {
@@ -167,6 +184,12 @@
         public static void SetBytes(byte[] buffer, ref int offset, byte[] data, int index, int count)
         {
             for (var i = 0; i < count; ++i) buffer[offset++] = data[index + i];
+        }
+
+        public static void SetString(byte[] buffer, Encoding encoding, ref int offset, string data, int index, int count)
+        {
+            var len = encoding.GetBytes(data, index, count, buffer, offset);
+            offset += len;
         }
 
         public static void SetVarInt(byte[] buffer, ref int offset, ulong data)
@@ -215,13 +238,20 @@
             return temp.ToArray();
         }
 
-        public static string ToHexStream(byte[] data)
+        public static string ToHexStream(byte[] data, int offset, int length, bool upper)
         {
-            var sb = new StringBuilder(2 * data.Length);
-            for (var i = 0; i < data.Length; ++i)
-                sb.AppendFormat("{0:X2}", data[i]);
+            var sb = new StringBuilder(length);
+            var format = upper ? "{0:X2}" : "{0:x2}";
+            var end = offset + length;
+
+            for (var i = offset; i < end; ++i)
+                sb.AppendFormat(format, data[i]);
             return sb.ToString();
         }
+
+        public static string ToHexStream(byte[] data) => ToHexStream(data, 0, data.Length, true);
+
+        public static string ToHexStream(byte[] data, bool upper) => ToHexStream(data, 0, data.Length, upper);
 
         public static void Reserve(ref byte[] buffer, int length)
         {

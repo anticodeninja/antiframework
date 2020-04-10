@@ -7,7 +7,7 @@ namespace Tests.Packets
 {
     using System;
     using System.Linq;
-
+    using System.Text;
     using AntiFramework.Packets;
 
     using NUnit.Framework;
@@ -21,6 +21,8 @@ namespace Tests.Packets
 
         private static byte[] VarIntVector { get; }
 
+        private static byte[] StringVector { get; }
+
         #endregion Properties
 
         #region Constructors
@@ -29,6 +31,7 @@ namespace Tests.Packets
         {
             MagicVector = BufferPrimitives.ParseHexStream("0123456789ABCDEF");
             VarIntVector = BufferPrimitives.ParseHexStream("03 CD02 B58402 D5B9CB01 D586F99E01 D59AC9967 CD5EA98D18161 D5AAB3B7A3E54B");
+            StringVector = BufferPrimitives.ParseHexStream("7A616E7A69626F72D189");
         }
 
         #endregion Constructors
@@ -40,6 +43,8 @@ namespace Tests.Packets
         {
             Assert.AreEqual(MagicVector.Concat(MagicVector.Skip(5)), BufferPrimitives.ParseHexStream("0123456789abcdefABCDEF"));
             Assert.AreEqual("0123456789ABCDEF", BufferPrimitives.ToHexStream(MagicVector));
+            Assert.AreEqual("0123456789abcdef", BufferPrimitives.ToHexStream(MagicVector, false));
+            Assert.AreEqual("6789abcd", BufferPrimitives.ToHexStream(MagicVector, 3, 4, false));
         }
 
         [Test]
@@ -107,6 +112,14 @@ namespace Tests.Packets
             Assert.AreEqual(0x5678, BufferPrimitives.GetBits(MagicVector, 0, 20, 16));
             Assert.AreEqual(0x56789A, BufferPrimitives.GetBits(MagicVector, 0, 20, 24));
             Assert.AreEqual(0x56789ABC, BufferPrimitives.GetBits(MagicVector, 0, 20, 32));
+        }
+
+        [Test]
+        public void GetStringTest()
+        {
+            var offset = 0;
+            Assert.AreEqual("zanzi", BufferPrimitives.GetString(StringVector, Encoding.ASCII, ref offset, 5));
+            Assert.AreEqual("borщ", BufferPrimitives.GetString(StringVector, Encoding.UTF8, ref offset, 5));
         }
 
         [Test]
@@ -224,6 +237,17 @@ namespace Tests.Packets
                 Assert.AreEqual(zigZag[i], BufferPrimitives.Long2ZigZag(reference[i]));
                 Assert.AreEqual(reference[i], BufferPrimitives.ZigZag2Long(zigZag[i]));
             }
+        }
+
+        [Test]
+        public void SetStringTest()
+        {
+            var offset = 0;
+            var temp = new byte[StringVector.Length];
+            BufferPrimitives.SetString(temp, Encoding.ASCII, ref offset, "ozanzibar", 1, 5);
+            BufferPrimitives.SetString(temp, Encoding.UTF8, ref offset, "borщ");
+            Assert.AreEqual(10, offset);
+            CollectionAssert.AreEqual(StringVector, temp);
         }
 
         [Test]
