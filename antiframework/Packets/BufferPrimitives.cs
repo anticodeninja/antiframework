@@ -253,7 +253,7 @@
 
         public static string ToHexStream(byte[] data, bool upper) => ToHexStream(data, 0, data.Length, upper);
 
-        public static void Reserve(ref byte[] buffer, int length)
+        public static void Reserve<T>(ref T[] buffer, int length)
         {
             if (buffer != null && buffer.Length >= length)
                 return;
@@ -265,7 +265,7 @@
             if (buffer != null)
                 Array.Resize(ref buffer, newLength);
             else
-                buffer = new byte[newLength];
+                buffer = new T[newLength];
         }
 
         #endregion Methods
