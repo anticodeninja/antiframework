@@ -65,7 +65,7 @@ namespace AntiFramework.Network.Packets
             temp.Payload = BufferPrimitives.GetBytes(buffer, ref offset, end - offset);
 
             output = temp;
-            return ParseResult.OK;
+            return ParseResult.OK();
         }
 
         public void Pack(ref byte[] buffer, ref int offset)

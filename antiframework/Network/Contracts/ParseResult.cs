@@ -7,9 +7,20 @@
 {
     public struct ParseResult
     {
-        #region Properties
+        #region Enums
 
-        public static ParseResult OK { get; }
+        public enum ResultCodes
+        {
+            Ok,
+            NeedMoreData,
+            BoxIsBroken,
+            IncorrectPacket,
+            IncorrectSign,
+        }
+
+        #endregion Enums
+
+        #region Properties
 
         public ResultCodes Code { get; }
         public string Description { get;}
@@ -17,11 +28,6 @@
         #endregion Properties
 
         #region Constructors
-
-        static ParseResult()
-        {
-            OK = new ParseResult(ResultCodes.Ok, string.Empty);
-        }
 
         private ParseResult(ResultCodes code, string description)
         {
@@ -33,17 +39,39 @@
 
         #region Methods
 
+        public static ParseResult OK() => new ParseResult(ResultCodes.Ok, null);
+
+        public static ParseResult OK<T1, T2>(T1 parsed, out T2 packet) where T1 : T2
+        {
+            packet = parsed;
+            return new ParseResult(ResultCodes.Ok, null);
+        }
+
         public static ParseResult NeedMoreData<T>(out T packet)
         {
             packet = default;
-            return new ParseResult(ResultCodes.NeedMoreData, string.Empty);
+            return new ParseResult(ResultCodes.NeedMoreData, null);
         }
 
         public static ParseResult IncorrectPacket<T>(out T packet)
         {
             packet = default;
-            return new ParseResult(ResultCodes.IncorrectPacket, string.Empty);
+            return new ParseResult(ResultCodes.IncorrectPacket, null);
         }
+
+        public static ParseResult IncorrectPacket<T>(out T packet, string message)
+        {
+            packet = default;
+            return new ParseResult(ResultCodes.IncorrectPacket, message);
+        }
+
+        public ParseResult Forward<T>(out T packet)
+        {
+            packet = default;
+            return this;
+        }
+
+        public override string ToString() => Description != null ? $"{Code} {Description}" : $"{Code}";
 
         #endregion Methods
     }

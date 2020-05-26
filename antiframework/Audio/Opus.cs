@@ -28,7 +28,7 @@ namespace AntiFramework.Audio
 
         #region Methods
 
-        public int CalcSamplesNumber(byte[] source, int sourceOffset, int sourceLength) => _decoder.GetSamplesNumber(source, sourceOffset + 9, sourceLength - 9);
+        public int CalcSamplesNumber(byte[] source, int sourceOffset, int sourceLength) => _decoder.GetSamplesNumber(source, sourceOffset, sourceLength);
 
         public int Restore(byte[] source, int sourceOffset, int sourceLength, short[] target, int targetOffset, int targetLength)
         {

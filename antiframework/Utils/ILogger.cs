@@ -3,14 +3,23 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // Copyright 2019-2020 Artem Yamshanov, me [at] anticode.ninja
 
-namespace AntiFramework.Network.Contracts
+﻿namespace AntiFramework.Utils
 {
-    public enum ResultCodes
+    using System;
+
+    public enum LogLevels
     {
-        Ok,
-        NeedMoreData,
-        BoxIsBroken,
-        IncorrectPacket,
-        IncorrectSign,
+        Off,
+        Trace,
+        Debug,
+        Info,
+        Warn,
+        Error,
+        Fatal,
+    }
+
+    public interface ILogger
+    {
+        void Log(LogLevels level, Func<string> message);
     }
 }

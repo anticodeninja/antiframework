@@ -250,7 +250,7 @@ namespace AntiFramework.Utils
             if (_lastKeys != null)
             {
                 var keyPosition = GetKeyPosition(_lastKeys);
-                if (keyPosition == -1)
+                if (keyPosition == -1 || keyPosition + 1 >= _args.Length)
                     return false;
 
                 rawValue = _args[keyPosition + 1];

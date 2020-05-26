@@ -108,6 +108,14 @@ namespace Tests.Utils
         }
 
         [Test]
+        public void SimplePositionErrorTest()
+        {
+            var result = SimpleParser(out _, out _, out _, out _, "-f");
+            StringAssert.Contains(ArgsParser.AttemptToReadNonExistentElement, result);
+            StringAssert.Contains(SIMPLE_HELP, result);
+        }
+
+        [Test]
         public void SimpleFullHelpTest()
         {
             var result = SimpleParser(out _, out _, out _, out _, "-h");
