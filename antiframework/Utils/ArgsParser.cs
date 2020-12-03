@@ -211,7 +211,9 @@ namespace AntiFramework.Utils
 
             // We should dive in any case, but it can be real diving (first case) or help generator diving (second one)
             _subParserDepth += 1;
+            Reset();
             parser(this);
+            Reset();
             _subParserDepth -= 1;
 
             if (_subParserDepth + 1 < _subParserMask.Count && !_subParserMask[_subParserDepth + 1])

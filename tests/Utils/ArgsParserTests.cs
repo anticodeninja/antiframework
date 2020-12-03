@@ -250,6 +250,64 @@ namespace Tests.Utils
             Assert.IsNull(_lastParser);
         }
 
+        [Test]
+        public void SubparserOutCleaningIssueTest()
+        {
+            var defaultParser = false;
+
+            var result = new ArgsParser(new string [0])
+                .Help("h", "help")
+                .Comment("Subparser default argparse test")
+                .Keys("t1", "t2").Tip("first test subparser").Subparser(parser =>
+                {
+                    if (parser.Result() != null)
+                        return;
+                    throw new InvalidOperationException();
+                })
+                .Subparser(parser =>
+                {
+                    if (parser.Result() != null)
+                        return;
+                    defaultParser = true;
+                })
+                .Result();
+
+            Assert.IsNull(result);
+            Assert.IsTrue(defaultParser);
+        }
+
+        [Test]
+        public void SubparserInCleaningIssueTest()
+        {
+            var defaultParser = false;
+            var pos = 0;
+
+            var result = new ArgsParser(new [] { "1" })
+                .Help("h", "help")
+                .Comment("Subparser default argparse test")
+                .Keys("t1", "t2").Tip("first test subparser").Subparser(parser =>
+                {
+                    if (parser
+                        .Keys("flag").Flag(out var flag)
+                        .Result() != null)
+                        return;
+                    throw new InvalidOperationException();
+                })
+                .Subparser(parser =>
+                {
+                    if (parser
+                        .Name("pos").Value(out pos)
+                        .Result() != null)
+                        return;
+                    defaultParser = true;
+                })
+                .Result();
+
+            Assert.IsNull(result);
+            Assert.IsTrue(defaultParser);
+            Assert.AreEqual(1, pos);
+        }
+
         private string SimpleParser(out string message, out int first, out TestEnum second, out int flag, params string[] args)
         {
             return new ArgsParser(args)
