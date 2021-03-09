@@ -366,3 +366,4 @@ namespace AntiFramework.Utils
         #endregion Methods
     }
 }
+

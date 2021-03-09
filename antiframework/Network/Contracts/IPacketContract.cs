@@ -11,3 +11,4 @@
         void Pack(ref byte[] buffer, ref int offset, T packet);
     }
 }
+

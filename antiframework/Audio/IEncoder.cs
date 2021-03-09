@@ -3,15 +3,13 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // Copyright 2019-2020 Artem Yamshanov, me [at] anticode.ninja
 
-namespace AntiFramework.Network.Contracts
+namespace AntiFramework.Audio
 {
-    using System.Net;
+    using System;
 
-    public class PacketContainer<T>
+    public interface IEncoder : IDisposable
     {
-        public IPEndPoint Source { get; set; }
-        public IPEndPoint Target { get; set; }
-        public T Payload { get; set; }
+        int Encode(short[] source, int sourceOffset, int sourceLength, byte[] target, int targetOffset, int length);
     }
 }
 

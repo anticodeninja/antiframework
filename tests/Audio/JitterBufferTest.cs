@@ -28,11 +28,11 @@ namespace Tests.Audio
 
         #endregion Fields
 
-        private class TestCodec : ICodec
+        private class TestDecoder : IDecoder
         {
             private short _plcCounter;
 
-            public TestCodec()
+            public TestDecoder()
             {
                 _plcCounter = PLC_OFFSET;
             }
@@ -61,7 +61,7 @@ namespace Tests.Audio
         [SetUp]
         public void Init()
         {
-            _jitterBuffer = new JitterBuffer(x => new TestCodec(), 3);
+            _jitterBuffer = new JitterBuffer(x => new TestDecoder(), 3);
             _outputBuffer = new short[1];
         }
 
@@ -427,7 +427,7 @@ namespace Tests.Audio
         [Test]
         public void UnalignedTest()
         {
-            _jitterBuffer = new JitterBuffer(x => new TestCodec(), 7);
+            _jitterBuffer = new JitterBuffer(x => new TestDecoder(), 7);
             var temp = new short[4];
 
             for (var i = 0; i < 7; ++i)
@@ -462,7 +462,7 @@ namespace Tests.Audio
         [Test]
         public void UnalignedBytesTest()
         {
-            _jitterBuffer = new JitterBuffer(x => new TestCodec(), 7);
+            _jitterBuffer = new JitterBuffer(x => new TestDecoder(), 7);
             var temp = new byte[8];
 
             for (var i = 0; i < 7; ++i)
@@ -495,3 +495,4 @@ namespace Tests.Audio
         }
     }
 }
+

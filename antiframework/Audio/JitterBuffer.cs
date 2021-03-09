@@ -22,7 +22,7 @@ namespace AntiFramework.Audio
 
         #region Fields
 
-        private readonly Func<byte, ICodec> _codecFactory;
+        private readonly Func<byte, IDecoder> _codecFactory;
         private readonly int _playBuffer;
         private readonly object _lock;
 
@@ -35,7 +35,7 @@ namespace AntiFramework.Audio
         private long _bufferSize;
         private long _lastSeqNumber;
         private byte _lastPayloadType;
-        private ICodec _codec;
+        private IDecoder _codec;
 
         #endregion Fields
 
@@ -47,7 +47,7 @@ namespace AntiFramework.Audio
 
         #region Constructors
 
-        public JitterBuffer(Func<byte, ICodec> codecFactory, int playBuffer)
+        public JitterBuffer(Func<byte, IDecoder> codecFactory, int playBuffer)
         {
             _codecFactory = codecFactory;
             _playBuffer = playBuffer;
@@ -243,3 +243,4 @@ namespace AntiFramework.Audio
         #endregion Methods
     }
 }
+

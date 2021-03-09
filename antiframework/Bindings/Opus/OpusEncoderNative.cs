@@ -3,12 +3,12 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // Copyright 2019-2020 Artem Yamshanov, me [at] anticode.ninja
 
-﻿﻿namespace AntiFramework.Bindings.Opus
+ namespace AntiFramework.Bindings.Opus
 {
     using System;
     using System.Runtime.InteropServices;
 
-    public class OpusEncoder : SafeHandle
+    public class OpusEncoderNative : SafeHandle
     {
         #region Properties
 
@@ -36,7 +36,7 @@
 
         #region Constructors
 
-        private OpusEncoder() : base(IntPtr.Zero, true)
+        private OpusEncoderNative() : base(IntPtr.Zero, true)
         {
         }
 
@@ -51,7 +51,7 @@
             return IsInvalid;
         }
 
-        public static OpusEncoder Create(int sampleRate, int channel, OpusPInvoke.Application application)
+        public static OpusEncoderNative Create(int sampleRate, int channel, OpusPInvoke.Application application)
         {
             var error = OpusPInvoke.ErrorCodes.OK;
             var temp = OpusPInvoke.OpusEncoderCreate(sampleRate, channel, application, ref error);
@@ -100,3 +100,4 @@
         #endregion Methods
     }
 }
+

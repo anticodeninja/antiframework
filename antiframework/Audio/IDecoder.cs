@@ -5,16 +5,15 @@
 
 namespace AntiFramework.Audio
 {
-    public interface ICodec
+    using System;
+
+    public interface IDecoder : IDisposable
     {
         int CalcSamplesNumber(byte[] source, int sourceOffset, int sourceLength);
 
         int Restore(byte[] source, int sourceOffset, int sourceLength, short[] target, int targetOffset, int targetLength);
 
         int Decode(byte[] source, int sourceOffset, int sourceLength, short[] target, int targetOffset, int targetLength);
-
-        int Encode(short[] source, int sourceOffset, int sourceLength, byte[] target, int targetOffset, int length);
-
-        void Dispose();
     }
 }
+

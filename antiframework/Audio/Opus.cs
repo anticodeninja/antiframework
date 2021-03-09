@@ -7,38 +7,24 @@ namespace AntiFramework.Audio
 {
     using Bindings.Opus;
 
-    public class Opus : ICodec
+    public class OpusEncoder : IEncoder
     {
         #region Fields
 
-        private readonly OpusDecoder _decoder;
-        private readonly OpusEncoder _encoder;
+        private readonly OpusEncoderNative _encoder;
 
         #endregion Fields
 
         #region Constructors
 
-        public Opus()
+        public OpusEncoder()
         {
-            _decoder = OpusDecoder.Create(8000, 1);
-            _encoder = OpusEncoder.Create(8000, 1, OpusPInvoke.Application.Voip);
+            _encoder = OpusEncoderNative.Create(8000, 1, OpusPInvoke.Application.Voip);
         }
 
         #endregion Constructors
 
         #region Methods
-
-        public int CalcSamplesNumber(byte[] source, int sourceOffset, int sourceLength) => _decoder.GetSamplesNumber(source, sourceOffset, sourceLength);
-
-        public int Restore(byte[] source, int sourceOffset, int sourceLength, short[] target, int targetOffset, int targetLength)
-        {
-            return _decoder.Decode(source, sourceOffset, sourceLength, target, targetOffset, targetLength, source != null);
-        }
-
-        public int Decode(byte[] source, int sourceOffset, int sourceLength, short[] target, int targetOffset, int targetLength)
-        {
-            return _decoder.Decode(source, sourceOffset, sourceLength, target, targetOffset, targetLength, false);
-        }
 
         public int Encode(short[] source, int sourceOffset, int sourceLength, byte[] target, int targetOffset, int length)
         {
@@ -47,10 +33,10 @@ namespace AntiFramework.Audio
 
         public void Dispose()
         {
-            _decoder.Dispose();
             _encoder.Dispose();
         }
 
         #endregion Methods
     }
 }
+

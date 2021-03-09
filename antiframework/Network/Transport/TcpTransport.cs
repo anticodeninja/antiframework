@@ -3,7 +3,7 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // Copyright 2019-2020 Artem Yamshanov, me [at] anticode.ninja
 
-﻿namespace AntiFramework.Network.Transport
+namespace AntiFramework.Network.Transport
 {
     using System;
     using System.Collections.Concurrent;
@@ -229,3 +229,4 @@
         #endregion Methods
     }
 }
+

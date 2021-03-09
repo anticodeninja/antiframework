@@ -52,3 +52,4 @@ namespace AntiFramework.Formats.Wave
         #endregion Methods
     }
 }
+

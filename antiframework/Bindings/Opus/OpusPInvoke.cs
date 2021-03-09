@@ -3,7 +3,7 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // Copyright 2019-2020 Artem Yamshanov, me [at] anticode.ninja
 
-﻿﻿namespace AntiFramework.Bindings.Opus
+  namespace AntiFramework.Bindings.Opus
 {
     using System;
     using System.Runtime.InteropServices;
@@ -87,7 +87,7 @@
         #region Methods
 
         [DllImport(LibraryName, EntryPoint = "opus_decoder_create", CallingConvention = CallingConvention.Cdecl)]
-        public static extern OpusDecoder OpusDecoderCreate(int fs, int channels, ref ErrorCodes error);
+        public static extern OpusDecoderNative OpusDecoderCreate(int fs, int channels, ref ErrorCodes error);
 
         [DllImport(LibraryName, EntryPoint = "opus_decode", CallingConvention = CallingConvention.Cdecl)]
         public static extern int OpusDecode(IntPtr st, IntPtr data, int len, IntPtr pcm, int frameSize, int decodeFec);
@@ -102,7 +102,7 @@
         public static extern int OpusPacketGetNbFrames(IntPtr packet, int len);
 
         [DllImport(LibraryName, EntryPoint = "opus_encoder_create", CallingConvention = CallingConvention.Cdecl)]
-        public static extern OpusEncoder OpusEncoderCreate(int fs, int channels, Application application, ref ErrorCodes error);
+        public static extern OpusEncoderNative OpusEncoderCreate(int fs, int channels, Application application, ref ErrorCodes error);
 
         [DllImport(LibraryName, EntryPoint = "opus_encode", CallingConvention = CallingConvention.Cdecl)]
         public static extern int OpusEncode(IntPtr st, IntPtr pcm, int frameSize, IntPtr data, int maxData);
@@ -135,3 +135,4 @@
         #endregion Methods
     }
 }
+

@@ -23,3 +23,4 @@
         void Log(LogLevels level, Func<string> message);
     }
 }
+
