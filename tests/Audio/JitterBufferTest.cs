@@ -287,7 +287,7 @@ namespace Tests.Audio
 
             // Big underrun reset all counters
             writeCounter += 1000;
-            readCounter += 1000;
+            readCounter = writeCounter;
             plcCounter = PLC_OFFSET;
 
             for (var i = 0; i < 2; ++i)

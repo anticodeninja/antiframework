@@ -72,29 +72,18 @@ namespace AntiFramework.Audio
         {
             lock (_lock)
             {
-                short delta = 1;
+                var delta = _codec != null ? (short)(packet.SequenceNumber - _lastSeqNumber) : (short)1;
+
+                if (Math.Abs(delta) >= _bufferSize)
+                {
+                    ResetBuffer();
+                    delta = 1;
+                }
 
                 if (_codec == null)
                 {
-                    _lastSeqNumber = packet.SequenceNumber;
+                    _lastSeqNumber = packet.SequenceNumber - 1;
                     _readSeqNumber = packet.SequenceNumber;
-                }
-                else
-                {
-                    delta = (short)(packet.SequenceNumber - _lastSeqNumber);
-                    if (packet.Marker || Math.Abs(delta) >= _bufferSize)
-                    {
-                        ResetBuffer();
-                        _lastSeqNumber = packet.SequenceNumber;
-                        _readSeqNumber = packet.SequenceNumber;
-                        delta = 1;
-                    }
-                    else if (delta > 0)
-                    {
-                        _lastSeqNumber += delta;
-                        if (_lastSeqNumber - _readSeqNumber >= _bufferSize)
-                            _readSeqNumber = _lastSeqNumber - _bufferSize + 1;
-                    }
                 }
 
                 if (_codec == null || _lastPayloadType != packet.PayloadType)
@@ -113,16 +102,11 @@ namespace AntiFramework.Audio
                     _lastPayloadType = packet.PayloadType;
                 }
 
-                if (delta < 0)
-                {
-                    _packets[(_lastSeqNumber + delta) % _bufferSize] = packet;
-                }
-                else if (delta > 0)
-                {
-                    for (var i = 1; i < delta; ++i)
-                        _packets[(_lastSeqNumber - delta + i) % _bufferSize] = null;
-                    _packets[_lastSeqNumber % _bufferSize] = packet;
-                }
+                _packets[(_lastSeqNumber + delta) % _bufferSize] = packet;
+                if (delta > 0)
+                    _lastSeqNumber += delta;
+                if (_lastSeqNumber - _readSeqNumber >= _bufferSize)
+                    _readSeqNumber = _lastSeqNumber - _bufferSize + 1;
             }
         }
 
@@ -209,7 +193,12 @@ namespace AntiFramework.Audio
             }
 
             var packet = _packets[_readSeqNumber % _bufferSize];
+            if (packet?.SequenceNumber != (ushort)_readSeqNumber)
+                packet = null;
+
             var nextPacket = _packets[(_readSeqNumber + 1) % _bufferSize];
+            if (nextPacket?.SequenceNumber != (ushort)_readSeqNumber + 1)
+                nextPacket = null;
 
             if (packet != null)
                 _codec.Decode(packet.Payload, 0, packet.Payload.Length, buffer, offset, _packetDuration);
