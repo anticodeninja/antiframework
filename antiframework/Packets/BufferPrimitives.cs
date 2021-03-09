@@ -88,7 +88,8 @@ namespace AntiFramework.Packets
         public static byte[] GetBytes(byte[] buffer, ref int offset, int count)
         {
             var temp = new byte[count];
-            for (var i = 0; i < count; ++i) temp[i] = buffer[offset++];
+            Buffer.BlockCopy(buffer, offset, temp, 0, count);
+            offset += count;
             return temp;
         }
 
@@ -183,7 +184,8 @@ namespace AntiFramework.Packets
 
         public static void SetBytes(byte[] buffer, ref int offset, byte[] data, int index, int count)
         {
-            for (var i = 0; i < count; ++i) buffer[offset++] = data[index + i];
+            Buffer.BlockCopy(data, index, buffer, offset, count);
+            offset += count;
         }
 
         public static void SetString(byte[] buffer, Encoding encoding, ref int offset, string data, int index, int count)
