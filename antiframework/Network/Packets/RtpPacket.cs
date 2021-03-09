@@ -56,10 +56,21 @@ namespace AntiFramework.Network.Packets
             temp.Ssrc = BufferPrimitives.GetUint32(buffer, ref offset);
 
             offset += contributingSourceCount * 4; // TODO implement CSRC
+            if (offset > end)
+                return ParseResult.IncorrectPacket(out output);
+
             if (extension)
             {
+                if (offset + 4 > end)
+                    return ParseResult.IncorrectPacket(out output);
+
                 var extensionCount = BufferPrimitives.GetUint32(buffer, ref offset);
+                if ((extensionCount & 0xFF000000) != 0)
+                    return ParseResult.IncorrectPacket(out output);
+
                 offset += (int)extensionCount * 4; // TODO implement Extension
+                if (offset > end)
+                    return ParseResult.IncorrectPacket(out output);
             }
 
             temp.Payload = BufferPrimitives.GetBytes(buffer, ref offset, end - offset);
@@ -94,3 +105,4 @@ namespace AntiFramework.Network.Packets
         #endregion Methods
     }
 }
+
