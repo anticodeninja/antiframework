@@ -2,7 +2,7 @@ config:
   rstrip: True
 variables:
   author: "Artem Yamshanov, me [at] anticode.ninja"
-  years: "2019-2020"
+  years: "2019-2021"
 global:
   header: |
       {mpl2_header}
