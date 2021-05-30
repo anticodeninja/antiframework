@@ -17,7 +17,7 @@ namespace AntiFramework.Network.Transport
     {
         #region Constants
 
-        private const int BUFFER_SIZE = ushort.MaxValue * 3;
+        private const int INITIAL_BUFFER_SIZE = ushort.MaxValue;
 
         #endregion Constants
 
@@ -64,11 +64,11 @@ namespace AntiFramework.Network.Transport
 
             _receiveEvent = new SocketAsyncEventArgs();
             _receiveEvent.Completed += ReceiveCompleted;
-            _receiveEvent.SetBuffer(new byte[BUFFER_SIZE], 0, BUFFER_SIZE);
+            _receiveEvent.SetBuffer(new byte[INITIAL_BUFFER_SIZE], 0, INITIAL_BUFFER_SIZE);
 
             _sendEvent = new SocketAsyncEventArgs();
             _sendEvent.Completed += SendCompleted;
-            _sendEvent.SetBuffer(new byte[BUFFER_SIZE], 0, BUFFER_SIZE);
+            _sendEvent.SetBuffer(new byte[INITIAL_BUFFER_SIZE], 0, INITIAL_BUFFER_SIZE);
 
             _sendQueue = new ConcurrentQueue<T>();
 
@@ -179,10 +179,7 @@ namespace AntiFramework.Network.Transport
                 if (_disposed != 1)
                     Logger?.Log(LogLevels.Error, () => $"cannot receive tcp: {e.SocketError}");
 
-                Helper.Safe(Logger, LogLevels.Warn, "cannot disconnect", () => _socket.Dispose());
-                _socket = null;
-
-                ConnectImpl();
+                ReconnectImpl();
                 return;
             }
 
@@ -209,7 +206,11 @@ namespace AntiFramework.Network.Transport
                 Array.Copy(e.Buffer, offset, e.Buffer, 0, available);
             }
 
-            e.SetBuffer(available, BUFFER_SIZE - available);
+            var buffer = e.Buffer;
+            if (available == buffer.Length)
+                Array.Resize(ref buffer, buffer.Length * 2);
+            e.SetBuffer(buffer, available, buffer.Length - available);
+
             ReceiveImpl();
         }
 
@@ -219,11 +220,23 @@ namespace AntiFramework.Network.Transport
             {
                 if (_disposed != 1)
                     Logger?.Log(LogLevels.Error, () => $"cannot send tcp: {e.SocketError}");
-                Stop();
+
+                ReconnectImpl();
                 return;
             }
 
             SendImpl();
+        }
+
+        private void ReconnectImpl()
+        {
+            ConnectionStateChanged?.Invoke(this, false);
+
+            Helper.Safe(Logger, LogLevels.Warn, "cannot disconnect", () => _socket.Dispose());
+            _socket = null;
+
+            if (_disposed != 1)
+                ConnectImpl();
         }
 
         #endregion Methods

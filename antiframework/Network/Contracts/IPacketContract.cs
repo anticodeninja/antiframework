@@ -3,7 +3,7 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // Copyright 2019-2020 Artem Yamshanov, me [at] anticode.ninja
 
-﻿﻿namespace AntiFramework.Network.Contracts
+namespace AntiFramework.Network.Contracts
 {
     public interface IPacketContract<T>
     {
